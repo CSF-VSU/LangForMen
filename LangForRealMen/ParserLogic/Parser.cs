@@ -1,5 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#define DEBUG
+
+using System;
 using System.Globalization;
 using LangForRealMen.AST;
 
@@ -7,20 +8,31 @@ namespace LangForRealMen.ParserLogic
 {
     public class Parser : ParserBase
     {
-        private Parser(string source) : base(source) { }
+        #region Singleton
+
+        private static Parser _instance;
+
+        private Parser()
+        {
+            VarCreator = new VarCreator();
+        }
+
+        public static Parser GetParser()
+        {
+            return _instance ?? (_instance = new Parser());
+        }
+
+        #endregion
+        
         
         // "культуронезависимый" формат для чисел (с разделителем точкой)
         public static readonly NumberFormatInfo NFI = new NumberFormatInfo();
 
         // значения идентификаторов
-        private static readonly Dictionary<string, double> _values = new Dictionary<string, double>(); 
-        public static Dictionary<string, double> Values {
-            get
-            {
-                return _values;
-            } 
-        }
+        public VarCreator VarCreator { get; set; }
+        
 
+         
         
         /*
             Number -> ^(0|[1-9][0-9]*)([.,][0-9]+)?$
@@ -33,7 +45,7 @@ namespace LangForRealMen.ParserLogic
             Program -> Term *
          */
 
-        public INode Number()
+        protected INode Number()
         {
             var number = "";
             while (Current == '.' || char.IsDigit(Current))
@@ -54,7 +66,7 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        public INode Ident()
+        protected INode Ident()
         {
             var identifier = "";
             if (char.IsLetter(Current))
@@ -75,7 +87,7 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        public INode Group()
+        protected INode Group()
         {
             if (IsMatch("("))
             {
@@ -90,20 +102,20 @@ namespace LangForRealMen.ParserLogic
             
             var pos = Pos;
             var identifier = Ident() as VarNode;
-            if (identifier != null && !Values.ContainsKey(identifier.Value))
+            if (identifier != null && !VarCreator.ContainsVarWithName(identifier.Value))
                 throw new ParserBaseException(string.Format("Значение {0} не определено (pos={1})", identifier, pos));
 
             return identifier;
         }
 
 
-        public INode Neg()
+        protected INode Neg()
         {
             INode result;
             if (IsMatch("-"))
             {
                 Match("-");
-                result = new NegNode {Child = Group()};
+                result = IsMatch("-") ? new NegNode {Child = Neg()} : new NegNode {Child = Group()};
             }
             else
                 result = Group();
@@ -112,7 +124,7 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        public INode Mult()
+        protected INode Mult()
         {
             var left = Neg();
             while (IsMatch("*", "/"))
@@ -127,7 +139,7 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        public INode Add()
+        protected INode Add()
         {
             var left = Mult();
             while (IsMatch("+", "-"))
@@ -142,9 +154,60 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        public INode Term()
+        protected INode Term()
         {
             return Add();
+        }
+
+
+        protected void Declaring()
+        {
+            string type;
+            if (IsMatch("int"))
+            {
+                Match("int");
+                type = "int";
+            }
+            else if (IsMatch("double"))
+            {
+                Match("double");
+                type = "double";
+            }
+            else
+            {
+                Match("string");
+                type = "string";
+            }
+
+            var identifier = Ident() as VarNode;
+            if (identifier == null)
+                throw  new ASTException("Введите имя переменной!");
+
+            if (IsMatch("="))
+            {
+                Match("=");
+                var value = Term();
+                VarCreator.CreateNewVariable(type, identifier.Value, value);
+            }
+            else
+                VarCreator.CreateNewVariable(type, identifier.Value);
+
+            while (IsMatch(","))
+            {
+                Match(",");
+                identifier = Ident() as VarNode;
+                if (identifier == null)
+                    throw new ASTException("Введите имя переменной!");
+
+                if (IsMatch("="))
+                {
+                    Match("=");
+                    var value = Term();
+                    VarCreator.CreateNewVariable(type, identifier.Value, value);
+                }
+                else
+                    VarCreator.CreateNewVariable(type, identifier.Value);
+            }
         }
 
 
@@ -156,14 +219,21 @@ namespace LangForRealMen.ParserLogic
                 var value = Term();
                 Console.WriteLine(value.Evaluate().ToString(NFI));
             }
-            else
+            else if (IsMatch("int", "double", "string"))
+            {
+                Declaring();
+            }
+            /*else
             {
                 var identifier = Ident() as VarNode;
                 Match("=");
                 var value = Term();
-                Values[identifier.Value] = value.Evaluate();
-                Console.WriteLine(Values[identifier.Value]);
-            }
+                Values[identifier.Value] = value;
+#if DEBUG
+                Console.WriteLine(Values[identifier.Value].Evaluate());
+#endif
+            }*/
+
             Match(";");
         }
 
@@ -178,9 +248,10 @@ namespace LangForRealMen.ParserLogic
             Program();
         }
 
-        public static void Execute(string source)
+        public void Execute(string source)
         {
-            new Parser(source).Result();
+            Init(source);
+            Result();
         }
     }
 }

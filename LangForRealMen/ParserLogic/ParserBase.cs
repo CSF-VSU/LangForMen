@@ -1,4 +1,6 @@
-﻿namespace LangForRealMen.ParserLogic
+﻿using System.ComponentModel;
+
+namespace LangForRealMen.ParserLogic
 {
     public class ParserBase
     {
@@ -8,14 +10,14 @@
 
 
         // разбираемая строка
-        private readonly string _source;
+        private string _source;
         // позиция указателя
-        private int pos = 0;
+        private int _pos;
 
-
-        public ParserBase(string source)
+        public virtual void Init(string source)
         {
             _source = source;
+            _pos = 0;
         }
 
 
@@ -25,13 +27,17 @@
             {
                 return _source;
             }
+            set
+            {
+                _source = value;
+            }
         }
 
         public int Pos
         {
             get
             {
-                return pos;
+                return _pos;
             }
         }
 
@@ -65,13 +71,13 @@
         public void Next()
         {
             if (!End)
-                pos++;
+                _pos++;
         }
 
         // пропускает незначащие (пробельные) символы
         public virtual void Skip()
         {
-            while (DefaultWhitespaces.IndexOf(this[pos]) >= 0)
+            while (DefaultWhitespaces.IndexOf(this[_pos]) >= 0)
                 Next();
         }
 
@@ -90,7 +96,7 @@
                         Next();
                     else
                     {
-                        this.pos = pos;
+                        this._pos = pos;
                         match = false;
                         break;
                     }
@@ -110,7 +116,7 @@
         {
             var pos = Pos;
             var result = MatchNoExcept(a);
-            this.pos = pos;
+            this._pos = pos;
             return result != null;
         }
 

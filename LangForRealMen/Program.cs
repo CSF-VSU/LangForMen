@@ -10,7 +10,7 @@ namespace LangForRealMen
             while (true)
             {
                 Console.Write(" > ");
-                Parser.Execute(Console.ReadLine());
+                Parser.GetParser().Execute(Console.ReadLine());
             }
         }
     }
