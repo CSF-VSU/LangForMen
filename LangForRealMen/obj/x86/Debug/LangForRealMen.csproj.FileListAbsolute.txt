@@ -1,0 +1,4 @@
+C:\Users\Enko\Desktop\Programming\SharpDevelop WorkSpace\CSF\LangForRealMen\LangForRealMen\bin\Debug\LangForRealMen.exe
+C:\Users\Enko\Desktop\Programming\SharpDevelop WorkSpace\CSF\LangForRealMen\LangForRealMen\bin\Debug\LangForRealMen.pdb
+C:\Users\Enko\Desktop\Programming\SharpDevelop WorkSpace\CSF\LangForRealMen\LangForRealMen\obj\x86\Debug\LangForRealMen.exe
+C:\Users\Enko\Desktop\Programming\SharpDevelop WorkSpace\CSF\LangForRealMen\LangForRealMen\obj\x86\Debug\LangForRealMen.pdb
