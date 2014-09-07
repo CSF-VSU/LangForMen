@@ -50,13 +50,14 @@
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />
     <Compile Include="AST\VarNode.cs" />
-    <Compile Include="ParserLogic\VarCreator.cs" />
+    <Compile Include="ParserLogic\VarInferense\TypeInferer.cs" />
+    <Compile Include="ParserLogic\VarInferense\VarCreator.cs" />
     <Compile Include="ParserLogic\Parser.cs" />
     <Compile Include="ParserLogic\ParserBase.cs" />
     <Compile Include="ParserLogic\ParserBaseExceptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="VarTypes.cs" />
+    <Compile Include="ParserLogic\VarInferense\VarTypes.cs" />
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

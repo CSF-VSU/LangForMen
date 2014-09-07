@@ -3,6 +3,7 @@
 using System;
 using System.Globalization;
 using LangForRealMen.AST;
+using LangForRealMen.ParserLogic.VarInferense;
 
 namespace LangForRealMen.ParserLogic
 {
@@ -31,9 +32,6 @@ namespace LangForRealMen.ParserLogic
         // значения идентификаторов
         public VarCreator VarCreator { get; set; }
         
-
-         
-        
         /*
             Number -> ^(0|[1-9][0-9]*)([.,][0-9]+)?$
             Var -> ^\w[\w\d]+$ <doesn't match with func name>
@@ -57,11 +55,18 @@ namespace LangForRealMen.ParserLogic
                 throw new ParserBaseException(string.Format("Ожидалось число (pos={0})", Pos));
             Skip();
 
+            
+            number = number.Replace('.', ',');
+            var isDouble = number.Contains(",");
+
             double result;
             if (double.TryParse(number, out result))
             {
-                return new NumberNode {Value = double.Parse(number, NFI)};
+                return isDouble
+                    ? new NumberNode {Value = new DoubleVar {Value = double.Parse(number)}}
+                    : new NumberNode {Value = new IntVar {Value = int.Parse(number)}};
             }
+
             throw new ParserBaseException(string.Format("Неверный формат числа (pos={0})", Pos));
         }
 
@@ -217,9 +222,9 @@ namespace LangForRealMen.ParserLogic
             {
                 Match("print");
                 var value = Term();
-                Console.WriteLine(value.Evaluate().ToString(NFI));
+                Console.WriteLine(value.Evaluate().ToString());
             }
-            else if (IsMatch("int", "double", "string"))
+            else if (IsMatch("int", "double", "string", "char", "bool"))
             {
                 Declaring();
             }
@@ -228,9 +233,9 @@ namespace LangForRealMen.ParserLogic
                 var identifier = Ident() as VarNode;
                 Match("=");
                 var value = Term();
-                Values[identifier.Value] = value;
+                VarCreator.Assign(identifier.Value, value);
 #if DEBUG
-                Console.WriteLine(Values[identifier.Value].Evaluate());
+                Console.WriteLine();
 #endif
             }*/
 

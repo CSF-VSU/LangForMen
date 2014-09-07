@@ -1,7 +1,9 @@
-﻿namespace LangForRealMen.AST
+﻿using LangForRealMen.ParserLogic.VarInferense;
+
+namespace LangForRealMen.AST
 {
     public interface INode
     {
-        double Evaluate();
+        IVarType Evaluate();
     }
 }

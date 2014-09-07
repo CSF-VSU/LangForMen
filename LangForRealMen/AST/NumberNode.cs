@@ -1,10 +1,12 @@
-﻿namespace LangForRealMen.AST
+﻿using LangForRealMen.ParserLogic.VarInferense;
+
+namespace LangForRealMen.AST
 {
     public class NumberNode : INode
     {
-        public double Value { get; set; }
+        public IVarType Value { get; set; }
 
-        public double Evaluate()
+        public IVarType Evaluate()
         {
             return Value;
         }
