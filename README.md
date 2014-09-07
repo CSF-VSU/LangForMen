@@ -6,6 +6,6 @@ print _value_;
 TypeNames:
 - int
 - double
-- char    ~~is not working~~
-- string  ~~is not working~~
-- bool    ~~is not working~~
+- char    (~~is not working~~)
+- string  (~~is not working~~)
+- bool    (~~is not working~~)
