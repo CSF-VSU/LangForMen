@@ -1,7 +1,7 @@
 Syntax:
 
-<typeName> <varName> [ = <value>] [, <varName>[ = <value>]];
-print <value>;
+<<typeName>> <<varName>> [ = <<value>>] [, <<varName>>[ = <<value>>]];
+print <<value>>;
 
 TypeNames:
 - int
