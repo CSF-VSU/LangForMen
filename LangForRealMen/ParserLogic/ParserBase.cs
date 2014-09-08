@@ -96,7 +96,7 @@ namespace LangForRealMen.ParserLogic
                         Next();
                     else
                     {
-                        this._pos = pos;
+                        _pos = pos;
                         match = false;
                         break;
                     }
@@ -116,7 +116,7 @@ namespace LangForRealMen.ParserLogic
         {
             var pos = Pos;
             var result = MatchNoExcept(a);
-            this._pos = pos;
+            _pos = pos;
             return result != null;
         }
 

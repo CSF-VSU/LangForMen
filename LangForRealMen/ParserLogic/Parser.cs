@@ -25,22 +25,26 @@ namespace LangForRealMen.ParserLogic
 
         #endregion
         
-        
         // "культуронезависимый" формат для чисел (с разделителем точкой)
         public static readonly NumberFormatInfo NFI = new NumberFormatInfo();
 
         // значения идентификаторов
         public VarCreator VarCreator { get; set; }
-        
+
         /*
-            Number -> ^(0|[1-9][0-9]*)([.,][0-9]+)?$
-            Var -> ^\w[\w\d]+$ <doesn't match with func name>
-            Group -> "(" Add ")" | Number | Var
-            Neg -> "-"? Group
-            Mult -> Neg (("*" | "/") Neg )*
-            Add -> Mult (("+" | "-") Mult )*
-            Command -> (Var "=" Add) ";"
-            Program -> Term *
+            <typeName> = ["int", "double", "bool", "char", "string"]
+         
+            Number  ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
+            Var     ->  ^\w[\w\d]+$ <doesn't match with func name>
+            String  ->  '"'<string>'"'
+            Group   ->  "(" Add ")" | Number | Var
+            Neg     ->  "-"? Group
+            Mult    ->  Neg (("*" | "/") Neg )*
+            Add     ->  Mult (("+" | "-") Mult )*
+            Ineq    ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
+            Logic   ->  Ineq (("|" | "&") Ineq )*
+            Command ->  "print" Logic | <typeName> Var ("=" Logic)?("," Var ("=" Logic)? )*
+            Program ->  (Command ";")*
          */
 
         protected INode Number()
@@ -97,7 +101,7 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("("))
             {
                 Match("(");
-                var result = Term();
+                var result = Add();
                 Match(")");
                 return result;
             }
@@ -134,7 +138,7 @@ namespace LangForRealMen.ParserLogic
             var left = Neg();
             while (IsMatch("*", "/"))
             {
-                var op = new MultNode {Value = Match("*", "/"), Nodes = new INode[2]};
+                var op = new AddMultNode {Value = Match("*", "/"), Nodes = new INode[2]};
                 op.Nodes[0] = left;
                 op.Nodes[1] = Neg();
 
@@ -149,7 +153,7 @@ namespace LangForRealMen.ParserLogic
             var left = Mult();
             while (IsMatch("+", "-"))
             {
-                var op = new AddNode { Value = Match("+", "-"), Nodes = new INode[2] };
+                var op = new AddMultNode {Value = Match("+", "-"), Nodes = new INode[2]};
                 op.Nodes[0] = left;
                 op.Nodes[1] = Mult();
 
@@ -159,30 +163,36 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        protected INode Term()
+        protected INode Inequality()
         {
-            return Add();
+            var left = Add();
+            if (!IsMatch(">", ">=", "<", "<=", "==", "!=")) return left;
+            
+            var op = new RelationNode {Value = Match(">", ">=", "<", "<=", "==", "!="), Nodes = new INode[2]};
+            op.Nodes[0] = left;
+            op.Nodes[1] = Add();
+            return op;
+        }
+
+
+        protected INode Logic()
+        {
+            var left = Inequality();
+            while (IsMatch("|", "&"))
+            {
+                var op = new RelationNode { Value = Match("|", "&"), Nodes = new INode[2] };
+                op.Nodes[0] = left;
+                op.Nodes[1] = Inequality();
+
+                left = op;
+            }
+            return left;
         }
 
 
         protected void Declaring()
         {
-            string type;
-            if (IsMatch("int"))
-            {
-                Match("int");
-                type = "int";
-            }
-            else if (IsMatch("double"))
-            {
-                Match("double");
-                type = "double";
-            }
-            else
-            {
-                Match("string");
-                type = "string";
-            }
+            var type = Match("int", "double", "char", "string", "bool");
 
             var identifier = Ident() as VarNode;
             if (identifier == null)
@@ -191,7 +201,7 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("="))
             {
                 Match("=");
-                var value = Term();
+                var value = Logic();
                 VarCreator.CreateNewVariable(type, identifier.Value, value);
             }
             else
@@ -207,7 +217,7 @@ namespace LangForRealMen.ParserLogic
                 if (IsMatch("="))
                 {
                     Match("=");
-                    var value = Term();
+                    var value = Logic();
                     VarCreator.CreateNewVariable(type, identifier.Value, value);
                 }
                 else
@@ -221,13 +231,14 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("print"))
             {
                 Match("print");
-                var value = Term();
+                var value = Logic();
                 Console.WriteLine(value.Evaluate().ToString());
             }
             else if (IsMatch("int", "double", "string", "char", "bool"))
             {
                 Declaring();
             }
+
             /*else
             {
                 var identifier = Ident() as VarNode;

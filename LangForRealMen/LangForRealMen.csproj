@@ -43,12 +43,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AST\AddNode.cs" />
+    <Compile Include="AST\AddMultNode.cs" />
     <Compile Include="AST\ASTExceptions.cs" />
     <Compile Include="AST\INode.cs" />
-    <Compile Include="AST\MultNode.cs" />
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />
+    <Compile Include="AST\RelationNode.cs" />
     <Compile Include="AST\VarNode.cs" />
     <Compile Include="ParserLogic\VarInferense\TypeInferer.cs" />
     <Compile Include="ParserLogic\VarInferense\VarCreator.cs" />

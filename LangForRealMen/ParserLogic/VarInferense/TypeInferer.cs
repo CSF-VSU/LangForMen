@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 
 namespace LangForRealMen.ParserLogic.VarInferense
 {
@@ -61,6 +62,21 @@ namespace LangForRealMen.ParserLogic.VarInferense
             };
         }
         #endregion
+
+        public static double GetNumericValue(IVarType var, out bool isInteger)
+        {
+            if (var is IntVar)
+            {
+                isInteger = true;
+                return (var as IntVar).Value;
+            }
+            if (var is DoubleVar)
+            {
+                isInteger = false;
+                return (var as DoubleVar).Value;
+            }
+            throw new Exception("Не является числовым типом.");
+        }
 
     }
 }

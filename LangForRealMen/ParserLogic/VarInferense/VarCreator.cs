@@ -87,8 +87,16 @@ namespace LangForRealMen.ParserLogic.VarInferense
                         throw new ASTException("Невозможно привести к типу double.");
                     break;
 
+                case "bool":
+                    _boolValues.Add(name, result as BoolVar);
+                    break;
+
+                case "char":
+                    _charValues.Add(name, result as CharVar);
+                    break;
+
                 case "string":
-                    //_stringValues.Add(name, value.Evaluate().ToString());
+                    _stringValues.Add(name, result as StringVar);
                     break;
             }
         }
@@ -108,6 +116,14 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 case "string":
                     _stringValues.Add(name, new StringVar{Value = String.Empty});
                     break;
+
+                case "bool":
+                    _boolValues.Add(name, new BoolVar {Value = true, IsDefined = false});
+                    break;
+
+                case "char":
+                    _charValues.Add(name, new CharVar {IsDefined = false, Value = '\0'});
+                    break;
             }
         }
 
@@ -115,7 +131,9 @@ namespace LangForRealMen.ParserLogic.VarInferense
 
         public bool ContainsVarWithName(string name)
         {
-            return _doubleValues.ContainsKey(name) || _intValues.ContainsKey(name) || _stringValues.ContainsKey(name);
+            return _doubleValues.ContainsKey(name) || _intValues.ContainsKey(name) || 
+                    _stringValues.ContainsKey(name) || _boolValues.ContainsKey(name) || 
+                    _charValues.ContainsKey(name);
         }
 
 

@@ -4,20 +4,25 @@ using LangForRealMen.ParserLogic.VarInferense;
 
 namespace LangForRealMen.AST
 {
-    public class AddNode : INode
+    public class AddMultNode : INode
     {
         protected static Dictionary<string, Func<double, double, double>> DoubleOperations
             = new Dictionary<string, Func<double, double, double>>
             {
-                {"+", (x, y) => x + y },
-                {"-", (x, y) => x - y }
+                {"+", (x, y) => x + y},
+                {"-", (x, y) => x - y},
+                {"*", (x, y) => x*y},
+                {"/", (x, y) => x/y}
             };
 
         protected static Dictionary<string, Func<int, int, int>> IntOperations
             = new Dictionary<string, Func<int, int, int>>
             {
-                {"+", (x, y) => x + y },
-                {"-", (x, y) => x - y }
+                {"+", (x, y) => x + y},
+                {"-", (x, y) => x - y},
+                {"*", (x, y) => x*y},
+                {"/", (x, y) => x/y},
+                {"%", (x, y) => x%y}
             };
 
         public string Value { get; set; }
@@ -31,7 +36,6 @@ namespace LangForRealMen.AST
             var left = Nodes[0].Evaluate();
             var right = Nodes[1].Evaluate();
 
-            //TODO: Вынести этот кусок повторяющегося кода выше куда-нить
             if (TypeInferer.IsNumeric(left, right))
             {
                 if (TypeInferer.IsInt(left, right))
