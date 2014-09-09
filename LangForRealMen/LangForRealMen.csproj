@@ -45,6 +45,7 @@
   <ItemGroup>
     <Compile Include="AST\AddMultNode.cs" />
     <Compile Include="AST\ASTExceptions.cs" />
+    <Compile Include="AST\FuncNode.cs" />
     <Compile Include="AST\INode.cs" />
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />

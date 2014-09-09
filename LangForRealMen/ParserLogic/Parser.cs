@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using LangForRealMen.AST;
 using LangForRealMen.ParserLogic.VarInferense;
@@ -31,12 +32,12 @@ namespace LangForRealMen.ParserLogic
 
         /*
             <typeName> = ["int", "double", "bool", "char", "string"]
-         
             Number  ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
             Var     ->  ^\w[\w\d]+$ <doesn't match with func name>
             String  ->  '"'<string>'"'
-            Group   ->  "(" Add ")" | Number | Var | >Func< | String
-            Neg     ->  "-"? Group
+            Func    ->  "(" Add ( "," Add )* ")"
+            Group   ->  "(" Add ")" | Number | Var | Func | String
+            Neg     ->  ("-" | "!")? Group
             Mult    ->  Neg (("*" | "/") Neg )*
             Add     ->  Mult (("+" | "-") Mult )*
             Ineq    ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
@@ -104,6 +105,26 @@ namespace LangForRealMen.ParserLogic
         }
 
 
+        protected INode Function()
+        {
+            var func = new FuncNode {Value = Match(FuncNode.GetNames())};
+            Match("(");
+            
+            var pars = new List<INode> {Add()};
+            while (IsMatch(","))
+            {
+                Match(",");
+                pars.Add(Add());
+            }
+
+            func.Nodes = new INode[pars.Count];
+            func.Nodes = pars.ToArray();
+
+            Match(")");
+            return func;
+        }
+
+
         protected INode Group()
         {
             if (IsMatch("("))
@@ -124,12 +145,16 @@ namespace LangForRealMen.ParserLogic
 
             if (!char.IsLetter(Current)) 
                 return Number();
+
+            if (IsMatch(FuncNode.GetNames()))
+            {
+                return Function();
+            }
             
-            var pos = Pos;
             var identifier = Ident() as VarNode;
             if (identifier != null && !VarCreator.ContainsVarWithName(identifier.Value))
-                throw new ParserBaseException(string.Format("Значение {0} не определено (pos={1})", identifier, pos));
-
+                throw new ParserBaseException(string.Format("Значение {0} не определено", identifier));
+                
             return identifier;
         }
 
