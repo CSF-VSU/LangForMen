@@ -37,7 +37,6 @@ namespace LangForRealMen.AST
                 bool isInt;
                 return new BoolVar
                 {
-                    IsDefined = true,
                     Value = RelationOperations[Value](
                         TypeInferer.GetNumericValue(left, out isInt), 
                         TypeInferer.GetNumericValue(right, out isInt))
@@ -48,7 +47,6 @@ namespace LangForRealMen.AST
             {
                 return new BoolVar
                 {
-                    IsDefined = true,
                     Value = BoolOperations[Value]((left as BoolVar).Value, (right as BoolVar).Value)
                 };
             }

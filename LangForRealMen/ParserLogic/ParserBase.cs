@@ -110,6 +110,31 @@ namespace LangForRealMen.ParserLogic
         }
 
 
+        protected string MatchNoExcept(bool isString, params string[] a)
+        {
+            int pos = Pos;
+            foreach (string s in a)
+            {
+                bool match = true;
+                foreach (char c in s)
+                    if (Current == c)
+                        Next();
+                    else
+                    {
+                        _pos = pos;
+                        match = false;
+                        break;
+                    }
+                if (match)
+                {
+                    if (!isString)
+                        Skip();
+                    return s;
+                }
+            }
+            return null;
+        }
+
         // проверяет, можно ли в текущей позиции указателя, распознать одну из строк;
         // указатель не смещается;
         public bool IsMatch(params string[] a)
@@ -144,6 +169,26 @@ namespace LangForRealMen.ParserLogic
             return result;
         }
 
+        public string Match(bool isString, params string[] a)
+        {
+            int pos = Pos;
+            var result = MatchNoExcept(isString, a);
+            if (result == null)
+            {
+                string message = "Ожидалась одна из строк: ";
+                bool first = true;
+                foreach (string s in a)
+                {
+                    if (!first)
+                        message += ", ";
+                    message += string.Format("\"{0}\"", s);
+                    first = false;
+                }
+                throw new ParserBaseException(string.Format("{0} (pos={1})", message, pos));
+            }
+            return result;
+        }
+
         // то же, что и Match(params string[] a), для удобства
         public string Match(string s)
         {
@@ -151,6 +196,20 @@ namespace LangForRealMen.ParserLogic
             try
             {
                 return Match(new[] { s });
+            }
+            catch
+            {
+                throw new ParserBaseException(s.Length == 1 ? string.Format("Ожидался символ: '{0}' (pos={1})", s, pos)
+                                                            : string.Format("Ожидалась строка: \"{0}\" (pos={1})", s, pos));
+            }
+        }
+
+        public string Match(bool isString, string s)
+        {
+            int pos = Pos;
+            try
+            {
+                return Match(isString, new[] { s });
             }
             catch
             {

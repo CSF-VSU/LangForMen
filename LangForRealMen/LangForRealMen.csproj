@@ -49,6 +49,7 @@
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />
     <Compile Include="AST\RelationNode.cs" />
+    <Compile Include="AST\StringNode.cs" />
     <Compile Include="AST\VarNode.cs" />
     <Compile Include="ParserLogic\VarInferense\TypeInferer.cs" />
     <Compile Include="ParserLogic\VarInferense\VarCreator.cs" />

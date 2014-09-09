@@ -1,6 +1,4 @@
-﻿#define DEBUG
-
-using System;
+﻿using System;
 using System.Globalization;
 using LangForRealMen.AST;
 using LangForRealMen.ParserLogic.VarInferense;
@@ -37,7 +35,7 @@ namespace LangForRealMen.ParserLogic
             Number  ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
             Var     ->  ^\w[\w\d]+$ <doesn't match with func name>
             String  ->  '"'<string>'"'
-            Group   ->  "(" Add ")" | Number | Var
+            Group   ->  "(" Add ")" | Number | Var | >Func< | String
             Neg     ->  "-"? Group
             Mult    ->  Neg (("*" | "/") Neg )*
             Add     ->  Mult (("+" | "-") Mult )*
@@ -74,6 +72,16 @@ namespace LangForRealMen.ParserLogic
             throw new ParserBaseException(string.Format("Неверный формат числа (pos={0})", Pos));
         }
 
+        protected INode String()
+        {
+            var result = "";
+            while (!IsMatch("\""))
+            {
+                result += Current;
+                Next();
+            }
+            return new StringNode {Value = result};
+        }
 
         protected INode Ident()
         {
@@ -101,8 +109,16 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("("))
             {
                 Match("(");
-                var result = Add();
+                var result = Logic();
                 Match(")");
+                return result;
+            }
+
+            if (IsMatch("\""))
+            {
+                Match(true, "\"");
+                var result = String();
+                Match("\"");
                 return result;
             }
 
@@ -121,10 +137,12 @@ namespace LangForRealMen.ParserLogic
         protected INode Neg()
         {
             INode result;
-            if (IsMatch("-"))
+            if (IsMatch("!", "-"))
             {
-                Match("-");
-                result = IsMatch("-") ? new NegNode {Child = Neg()} : new NegNode {Child = Group()};
+                var op = Match("!", "-");
+                result = IsMatch(op)
+                    ? new NegNode {Value = op, Child = Neg()}
+                    : new NegNode {Value = op, Child = Group()};
             }
             else
                 result = Group();
@@ -192,7 +210,7 @@ namespace LangForRealMen.ParserLogic
 
         protected void Declaring()
         {
-            var type = Match("int", "double", "char", "string", "bool");
+            var type = Match("int", "double", "string", "bool");
 
             var identifier = Ident() as VarNode;
             if (identifier == null)
@@ -225,6 +243,14 @@ namespace LangForRealMen.ParserLogic
             }
         }
 
+        protected void Assigning()
+        {
+            var identifier = Ident() as VarNode;
+            Match("=");
+            var value = Logic();
+            VarCreator.Assign(identifier.Value, value);
+        }
+
 
         public void Expr()
         {
@@ -234,21 +260,14 @@ namespace LangForRealMen.ParserLogic
                 var value = Logic();
                 Console.WriteLine(value.Evaluate().ToString());
             }
-            else if (IsMatch("int", "double", "string", "char", "bool"))
+            else if (IsMatch("int", "double", "string", "bool"))
             {
                 Declaring();
             }
-
-            /*else
+            else
             {
-                var identifier = Ident() as VarNode;
-                Match("=");
-                var value = Term();
-                VarCreator.Assign(identifier.Value, value);
-#if DEBUG
-                Console.WriteLine();
-#endif
-            }*/
+                Assigning();
+            }
 
             Match(";");
         }

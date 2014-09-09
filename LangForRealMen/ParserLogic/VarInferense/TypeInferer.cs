@@ -26,11 +26,6 @@ namespace LangForRealMen.ParserLogic.VarInferense
             return vars.Aggregate(true, (current, type) => current && (type is DoubleVar));
         }
 
-        public static bool IsChar(params IVarType[] vars)
-        {
-            return vars.Aggregate(true, (current, type) => current && (type is CharVar));
-        }
-
         public static bool IsBool(params IVarType[] vars)
         {
             return vars.Aggregate(true, (current, type) => current && (type is BoolVar));
@@ -48,7 +43,6 @@ namespace LangForRealMen.ParserLogic.VarInferense
         {
             return new DoubleVar
             {
-                IsDefined = true,
                 Value = var.Value
             };
         }
@@ -57,7 +51,6 @@ namespace LangForRealMen.ParserLogic.VarInferense
         {
             return new IntVar
             {
-                IsDefined = true,
                 Value = (int) var.Value
             };
         }

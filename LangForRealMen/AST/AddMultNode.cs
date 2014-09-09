@@ -41,34 +41,33 @@ namespace LangForRealMen.AST
                 if (TypeInferer.IsInt(left, right))
                     return new IntVar
                     {
-                        IsDefined = true,
                         Value = IntOperations[Value]((left as IntVar).Value, (right as IntVar).Value)
                     };
 
                 if (TypeInferer.IsDouble(left, right))
                     return new DoubleVar
                     {
-                        IsDefined = true,
                         Value = DoubleOperations[Value]((left as DoubleVar).Value, (right as DoubleVar).Value)
                     };
 
                 if (TypeInferer.IsInt(left) && TypeInferer.IsDouble(right))
                     return new DoubleVar
                     {
-                        IsDefined = true,
                         Value = DoubleOperations[Value]((left as IntVar).Value, (right as DoubleVar).Value)
                     };
 
                 return new DoubleVar
                 {
-                    IsDefined = true,
                     Value = DoubleOperations[Value]((left as DoubleVar).Value, (right as IntVar).Value)
                 };
             }
-            else
-            {
-                //strings, bools
-            }
+
+            if (TypeInferer.IsString(left) && Value == "+")
+                return new StringVar {Value = (left as StringVar).Value + right.ToString()};
+            if (TypeInferer.IsString(right) && Value == "+")
+                return new StringVar {Value = left.ToString() + (right as StringVar).Value};
+            
+
             throw new ASTException("Невозможно применить операцию к данным операндам.");
         }
     }
