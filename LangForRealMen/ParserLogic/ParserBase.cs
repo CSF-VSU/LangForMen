@@ -1,6 +1,4 @@
-﻿using System.ComponentModel;
-
-namespace LangForRealMen.ParserLogic
+﻿namespace LangForRealMen.ParserLogic
 {
     public class ParserBase
     {
@@ -16,7 +14,7 @@ namespace LangForRealMen.ParserLogic
 
         public virtual void Init(string source)
         {
-            _source = source;
+            _source = source.ToLower(); // TODO: Не ловерить то, что внутри строк
             _pos = 0;
         }
 

@@ -53,5 +53,10 @@ namespace LangForRealMen.AST
 
             throw new ASTException("Нельзя применить операции сравнения к нечисловым типам.");
         }
+
+        public override string ToString()
+        {
+            return Nodes[0] + " " + Value + " " + Nodes[1];
+        }
     }
 }

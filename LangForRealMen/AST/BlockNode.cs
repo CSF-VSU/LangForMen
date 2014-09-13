@@ -2,13 +2,18 @@
 
 namespace LangForRealMen.AST
 {
-    public class NumberNode : INode
+    public class BlockNode : INode
     {
-        public IVarType Value { get; set; }
+        public BlockVar Value { get; set; }
 
         public IVarType Evaluate()
         {
-            return Value;
+            foreach (var command in Value.Commands)
+            {
+                command.Evaluate();
+            }
+            
+            return null;            
         }
 
         public override string ToString()

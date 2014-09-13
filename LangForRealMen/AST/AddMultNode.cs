@@ -70,5 +70,10 @@ namespace LangForRealMen.AST
 
             throw new ASTException("Невозможно применить операцию к данным операндам.");
         }
+
+        public override string ToString()
+        {
+            return Nodes[0] + " " + Value + " " + Nodes[1];
+        }
     }
 }

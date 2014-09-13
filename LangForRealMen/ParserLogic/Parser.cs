@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using LangForRealMen.AST;
 using LangForRealMen.ParserLogic.VarInferense;
 
@@ -36,14 +36,15 @@ namespace LangForRealMen.ParserLogic
             Var     ->  ^\w[\w\d]+$ <doesn't match with func name>
             String  ->  '"'<string>'"'
             Func    ->  "(" Add ( "," Add )* ")"
-            Group   ->  "(" Add ")" | Number | Var | Func | String
+            Group   ->  "(" Add ")" | Number | Var | String
             Neg     ->  ("-" | "!")? Group
             Mult    ->  Neg (("*" | "/") Neg )*
             Add     ->  Mult (("+" | "-") Mult )*
             Ineq    ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
             Logic   ->  Ineq (("|" | "&") Ineq )*
-            Command ->  "print" Logic | <typeName> Var ("=" Logic)?("," Var ("=" Logic)? )*
-            Program ->  (Command ";")*
+            Term    ->  <typeName> Var ("=" Logic)?("," Var ("=" Logic)? )* | Func
+            Command ->  (Term ";")*
+            Block   ->  "{" Command "}"
          */
 
         protected INode Number()
@@ -110,7 +111,7 @@ namespace LangForRealMen.ParserLogic
             var func = new FuncNode {Value = Match(FuncNode.GetNames())};
             Match("(");
             
-            var pars = new List<INode> {Add()};
+            var pars = new List<INode> { Add() };
             while (IsMatch(","))
             {
                 Match(",");
@@ -122,6 +123,12 @@ namespace LangForRealMen.ParserLogic
 
             Match(")");
             return func;
+        }
+
+
+        protected INode BoolConstant()
+        {
+            return new BoolNode { Value = new BoolVar { Value = "yep" == Match("yep", "nope") } };
         }
 
 
@@ -143,19 +150,18 @@ namespace LangForRealMen.ParserLogic
                 return result;
             }
 
+            if (IsMatch("yep", "nope"))
+                return BoolConstant();
+
             if (!char.IsLetter(Current)) 
                 return Number();
-
-            if (IsMatch(FuncNode.GetNames()))
-            {
-                return Function();
-            }
             
-            var identifier = Ident() as VarNode;
-            if (identifier != null && !VarCreator.ContainsVarWithName(identifier.Value))
+            //var identifier = ;
+            /*if (identifier != null) // && !VarCreator.ContainsVarWithName(identifier.Value))
                 throw new ParserBaseException(string.Format("Значение {0} не определено", identifier));
-                
-            return identifier;
+              */
+  
+            return Ident() as VarNode;
         }
 
 
@@ -209,7 +215,8 @@ namespace LangForRealMen.ParserLogic
         protected INode Inequality()
         {
             var left = Add();
-            if (!IsMatch(">", ">=", "<", "<=", "==", "!=")) return left;
+            if (!IsMatch(">", ">=", "<", "<=", "==", "!=")) 
+                return left;
             
             var op = new RelationNode {Value = Match(">", ">=", "<", "<=", "==", "!="), Nodes = new INode[2]};
             op.Nodes[0] = left;
@@ -233,22 +240,34 @@ namespace LangForRealMen.ParserLogic
         }
 
 
-        protected void Declaring()
+        protected IEnumerable<INode> Declaring()
         {
-            var type = Match("int", "double", "string", "bool");
+            var result = new List<INode>();
+            var type = Match("int", "double", "string", "bool", "block");
 
             var identifier = Ident() as VarNode;
             if (identifier == null)
                 throw  new ASTException("Введите имя переменной!");
 
+            var op = new AssignNode { Children = new INode[3] };
+            op.Children[0] = new StringNode { Value = type };
+            op.Children[1] = new StringNode { Value = identifier.Value };
+            op.Children[2] = null;
+
             if (IsMatch("="))
             {
                 Match("=");
-                var value = Logic();
-                VarCreator.CreateNewVariable(type, identifier.Value, value);
+
+                INode value;
+                if (type == "block" || IsMatch("{"))
+                    value = Block();
+                else
+                    value = Logic();
+
+                op.Children[2] = value;
             }
-            else
-                VarCreator.CreateNewVariable(type, identifier.Value);
+            result.Add(op);
+
 
             while (IsMatch(","))
             {
@@ -257,56 +276,85 @@ namespace LangForRealMen.ParserLogic
                 if (identifier == null)
                     throw new ASTException("Введите имя переменной!");
 
+                var op2 = new AssignNode { Children = new INode[3] };
+                op2.Children[0] = new StringNode { Value = type };
+                op2.Children[1] = new StringNode { Value = identifier.Value };
+                op2.Children[2] = null;
                 if (IsMatch("="))
                 {
                     Match("=");
-                    var value = Logic();
-                    VarCreator.CreateNewVariable(type, identifier.Value, value);
+
+                    INode value;
+                    if (type == "block" || IsMatch("{"))
+                        value = Block();
+                    else
+                        value = Logic();
+
+                    op2.Children[2] = value;
                 }
-                else
-                    VarCreator.CreateNewVariable(type, identifier.Value);
+                result.Add(op2);
             }
+
+            return result;
         }
 
-        protected void Assigning()
+
+        protected INode Assigning()
         {
             var identifier = Ident() as VarNode;
+            if (identifier == null) 
+                throw new ASTException("Ожидался идендификатор");
             Match("=");
             var value = Logic();
-            VarCreator.Assign(identifier.Value, value);
+
+            var op = new AssignNode { Children = new INode[3] };
+            op.Children[0] = null;
+            op.Children[1] = new StringNode { Value = identifier.Value };
+            op.Children[2] = value;
+            
+            return op;
         }
 
 
-        public void Expr()
+        public IEnumerable<INode> Term()
         {
-            if (IsMatch("print"))
-            {
-                Match("print");
-                var value = Logic();
-                Console.WriteLine(value.Evaluate().ToString());
-            }
-            else if (IsMatch("int", "double", "string", "bool"))
-            {
-                Declaring();
-            }
-            else
-            {
-                Assigning();
-            }
+            if (IsMatch("int", "double", "string", "bool", "block"))
+                return Declaring();
 
-            Match(";");
+            return Enumerable.Repeat(IsMatch(FuncNode.GetNames()) ? Function() : Assigning(), 1);
         }
 
-        public void Program()
+
+        public IEnumerable<INode> Command()
         {
-            while (!End)
-                Expr();
+            var res = new List<INode>();
+            while (!IsMatch("}") && !End)
+            {
+                res.AddRange(Term());
+                Match(";");
+            }
+            return res;
         }
+
+        public INode Block()
+        {
+            var result = new BlockNode {Value = new BlockVar()};
+            Match("{");
+            result.Value.Commands = Command();
+            Match("}");
+            return result;
+        }
+
 
         public void Result()
         {
-            Program();
+            var commands = Term();
+            foreach (var node in commands)
+            {
+                node.Evaluate();
+            }
         }
+
 
         public void Execute(string source)
         {

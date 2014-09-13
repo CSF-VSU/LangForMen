@@ -1,5 +1,4 @@
-﻿using System;
-using LangForRealMen.ParserLogic;
+﻿using LangForRealMen.ParserLogic;
 using LangForRealMen.ParserLogic.VarInferense;
 
 namespace LangForRealMen.AST
@@ -14,6 +13,11 @@ namespace LangForRealMen.AST
                 throw new ASTException(string.Format("Use of undeclared variable {0}", Value));
 
             return Parser.GetParser().VarCreator.GetVar(Value);
+        }
+
+        public override string ToString()
+        {
+            return Value;
         }
     }
 }

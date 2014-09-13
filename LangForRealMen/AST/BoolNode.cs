@@ -2,18 +2,18 @@
 
 namespace LangForRealMen.AST
 {
-    public class StringNode : INode
+    public class BoolNode : INode
     {
-        public string Value { get; set; }
+        public BoolVar Value { get; set; }
 
         public IVarType Evaluate()
         {
-            return new StringVar {Value = Value};
+            return Value;
         }
 
         public override string ToString()
         {
-            return Value;
+            return Value.ToString();
         }
     }
 }

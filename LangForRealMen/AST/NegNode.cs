@@ -29,5 +29,10 @@ namespace LangForRealMen.AST
 
             throw new ASTException("Смена знака (отрицание) применимо только к числовому и логическому типу.");
         }
+
+        public override string ToString()
+        {
+            return Value + Child;
+        }
     }
 }

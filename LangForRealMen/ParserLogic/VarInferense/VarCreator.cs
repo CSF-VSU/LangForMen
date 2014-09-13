@@ -28,7 +28,11 @@ namespace LangForRealMen.ParserLogic.VarInferense
 
         public void CreateNewVariable(string type, string name, INode value)
         {
-            var result = value.Evaluate();
+            IVarType result;
+            if (!(value is BlockNode))
+                result = value.Evaluate();
+            else
+                result = (value as BlockNode).Value;
 
             switch (type)
             {
@@ -51,19 +55,26 @@ namespace LangForRealMen.ParserLogic.VarInferense
                     Vars.Add(name, new VarPack{Var = new StringVar(), IsDefined = true});
                     AssignToString(Vars[name].Var as StringVar, result);
                     break;
+
+                case "block":
+                    Vars.Add(name, new VarPack{Var = new BlockVar(), IsDefined = true});
+                    AssignToBlock(Vars[name].Var as BlockVar, result);
+                    break;
             }
         }
+
+        
 
         public void CreateNewVariable(string typename, string name)
         {
             switch (typename)
             {
                 case "int":
-                    Vars.Add(name, new VarPack {IsDefined = false, Var = null});
+                    Vars.Add(name, new VarPack {IsDefined = false, Var = new IntVar()/* Type = VarTypeLabel.IntVar*/});
                     break;
 
                 case "double":
-                    Vars.Add(name, new VarPack {IsDefined = false, Var = null});
+                    Vars.Add(name, new VarPack {IsDefined = false, Var = new DoubleVar()/*, Type = VarTypeLabel.DoubleVar*/});
                     break;
 
                 case "string":
@@ -71,7 +82,11 @@ namespace LangForRealMen.ParserLogic.VarInferense
                     break;
 
                 case "bool":
-                    Vars.Add(name, new VarPack {IsDefined = false, Var = null});
+                    Vars.Add(name, new VarPack {IsDefined = false, Var = new BoolVar()/*, Type = VarTypeLabel.BoolVar*/});
+                    break;
+
+                case "block":
+                    Vars.Add(name, new VarPack {IsDefined = false, Var = new BlockVar()/*, Type = VarTypeLabel.BlockVar*/});
                     break;
             }
         }
@@ -87,18 +102,23 @@ namespace LangForRealMen.ParserLogic.VarInferense
             var var = Vars[name];
             var newValue = value.Evaluate();
 
+            if (!var.IsDefined)
+                var.IsDefined = true;
+
             if (var.Var is IntVar)
                 AssignToInt(var.Var as IntVar, newValue);
             else if (var.Var is DoubleVar)
                 AssignToDouble(var.Var as DoubleVar, newValue);
             else if (var.Var is BoolVar)
                 AssignToBool(var.Var as BoolVar, newValue);
-            else
+            else if (var.Var is StringVar)
                 AssignToString(var.Var as StringVar, newValue);
+            else
+                AssignToBlock(var.Var as BlockVar, newValue);
         }
 
 
-        private void AssignToInt(IntVar var, IVarType newValue)
+        private static void AssignToInt(IntVar var, IVarType newValue)
         {
             if (newValue is IntVar)
                 var.Value = (newValue as IntVar).Value;
@@ -106,7 +126,7 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 var.Value = TypeInferer.DoubleToInt(newValue as DoubleVar).Value;
             else if (newValue is BoolVar)
                 var.Value = (newValue as BoolVar).Value ? 1 : 0;
-            else
+            else if (newValue is StringVar)
             {
                 int result;
                 var s = (newValue as StringVar).Value;
@@ -115,9 +135,13 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 else 
                     throw new ASTException("Нельзя привести к типу int.");
             }
+            else
+                throw new ASTException("Нельзя привести к типу int.");
         }
 
-        private void AssignToDouble(DoubleVar var, IVarType newValue)
+
+
+        private static void AssignToDouble(DoubleVar var, IVarType newValue)
         {
             if (newValue is IntVar)
                 var.Value = TypeInferer.IntToDouble(newValue as IntVar).Value;
@@ -125,7 +149,7 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 var.Value = (newValue as DoubleVar).Value;
             else if (newValue is BoolVar)
                 var.Value = (newValue as BoolVar).Value ? 1 : 0;
-            else
+            else if (newValue is StringVar)
             {
                 double result;
                 var s = (newValue as StringVar).Value;
@@ -134,9 +158,12 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 else
                     throw new ASTException("Нельзя привести к типу double.");
             }
+            else
+                throw new ASTException("Нельзя привести к типу double.");
         }
 
-        private void AssignToBool(BoolVar var, IVarType newValue)
+
+        private static void AssignToBool(BoolVar var, IVarType newValue)
         {
             if (newValue is IntVar)
                 var.Value = (newValue as IntVar).Value != 0;
@@ -144,7 +171,7 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 throw new ASTException("Нельзя привести к типу bool.");
             else if (newValue is BoolVar)
                 var.Value = (newValue as BoolVar).Value;
-            else
+            else if (newValue is StringVar)
             {
                 var s = (newValue as StringVar).Value.ToLower();
                 switch (s)
@@ -156,14 +183,28 @@ namespace LangForRealMen.ParserLogic.VarInferense
                         var.Value = false;
                         break;
                     default:
-                        throw new ASTException("Нельзя привести к типу int.");
+                        throw new ASTException("Нельзя привести к типу bool.");
                 }
             }
+            else
+                throw new ASTException("Нельзя привести к типу bool.");
         }
 
-        private void AssignToString(StringVar var, IVarType newValue)
+
+        private static void AssignToString(StringVar var, IVarType newValue)
         {
             var.Value = newValue.ToString();
+        }
+
+
+        private static void AssignToBlock(BlockVar var, IVarType newValue)
+        {
+            if (newValue is BlockVar)
+            {
+                var.Commands = (newValue as BlockVar).Commands;
+            }
+            else
+                throw new ASTException("Нельзя привести к типу block.");
         }
         #endregion
 
