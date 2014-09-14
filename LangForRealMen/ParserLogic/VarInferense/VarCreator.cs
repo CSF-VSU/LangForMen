@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using LangForRealMen.AST;
 
 namespace LangForRealMen.ParserLogic.VarInferense
@@ -100,7 +101,11 @@ namespace LangForRealMen.ParserLogic.VarInferense
                 throw new ASTException(string.Format("Использование необъявленной переменной {0}", name));
 
             var var = Vars[name];
-            var newValue = value.Evaluate();
+            IVarType newValue;
+            if (!(value is BlockNode))
+                newValue = value.Evaluate();
+            else
+                newValue = (value as BlockNode).Value;
 
             if (!var.IsDefined)
                 var.IsDefined = true;
@@ -214,11 +219,21 @@ namespace LangForRealMen.ParserLogic.VarInferense
             return Vars.ContainsKey(name);
         }
 
+        public bool IsBlockVar(string name)
+        {
+            return Vars.ContainsKey(name) && (Vars[name].Var is BlockVar);
+        }
+
         public IVarType GetVar(string name)
         {
             if (_vars.ContainsKey(name))
                 return _vars[name].IsDefined ? _vars[name].Var : new UndefinedVar();
             return null;
+        }
+
+        public string[] GetBlockVarNames()
+        {
+            return Vars.Keys.Where(key => Vars[key].Var is BlockVar).ToArray();
         }
     }
 }

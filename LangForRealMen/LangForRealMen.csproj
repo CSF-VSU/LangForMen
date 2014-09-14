@@ -49,6 +49,7 @@
     <Compile Include="AST\BlockNode.cs" />
     <Compile Include="AST\BoolNode.cs" />
     <Compile Include="AST\FuncNode.cs" />
+    <Compile Include="AST\IfNode.cs" />
     <Compile Include="AST\INode.cs" />
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />

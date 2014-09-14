@@ -13,7 +13,7 @@ namespace LangForRealMen.AST
                 command.Evaluate();
             }
             
-            return null;            
+            return null;
         }
 
         public override string ToString()

@@ -9,19 +9,9 @@ namespace LangForRealMen.ParserLogic.VarInferense
         string ToString();
     }
 
-    /*public enum VarTypeLabel
-    {
-        IntVar,
-        DoubleVar,
-        BoolVar,
-        StringVar,
-        BlockVar
-    }*/
-
     public class VarPack
     {
         public IVarType Var { get; set; }
-        //public VarTypeLabel Type { get; set; }
         public bool IsDefined { get; set; }
     }
 
