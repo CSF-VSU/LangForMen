@@ -66,15 +66,31 @@ namespace LangForRealMen.ParserLogic.VarInferense
 
     public class BlockVar : IVarType
     {
-        public IEnumerable<INode> Commands { get; set; }
+        public List<INode> Commands { get; set; }
+
+        public BlockVar()
+        {
+            Commands = new List<INode>();    
+        }
 
         public override string ToString()
         {
             if (Commands == null) return "Block is empty";
-            
-            var s = Commands.Aggregate("", (current, command) => current + command.ToString() + " | ");
-            s = s.Substring(0, s.Length - 2);
-            
+
+            var s = "{\n";
+            Parser.IdentDepth++;
+
+            foreach (var command in Commands)
+            {
+                for (var i = 0; i < Parser.IdentDepth; i++)
+                    s += "\t";
+                s += command;
+            }
+
+            Parser.IdentDepth--;
+            for (var i = 0; i < Parser.IdentDepth; i++)
+                s += "\t";
+            s += "}";
             return s;
         }
     }

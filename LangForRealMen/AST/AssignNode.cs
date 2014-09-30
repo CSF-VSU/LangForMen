@@ -26,9 +26,8 @@ namespace LangForRealMen.AST
 
         public override string ToString()
         {
-            var s = Children[0] != null ? Children[0].ToString() : "";
-            return s + " " + Children[1] + " = " + Children[2];
-
+            var s = Children[0] != null ? Children[0] + " " : "";
+            return s + Children[1] + " = " + Children[2] + "\n";
         }
     }
 }

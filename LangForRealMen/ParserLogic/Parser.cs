@@ -27,24 +27,37 @@ namespace LangForRealMen.ParserLogic
         // "культуронезависимый" формат для чисел (с разделителем точкой)
         public static readonly NumberFormatInfo NFI = new NumberFormatInfo();
 
+        public static int IdentDepth = 0;
+
+        public INode _program { get; set; }
+
         // значения идентификаторов
         public VarCreator VarCreator { get; set; }
-        
-        /*
-            <typeName> = ["int", "double", "bool", "char", "string"]
-            Number  ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
-            Var     ->  ^\w[\w\d]+$ <doesn't match with func name>
-            String  ->  '"'<string>'"'
-            Func    ->  "(" Add ( "," Add )* ")"
-            Group   ->  "(" Add ")" | Number | Var | String
-            Neg     ->  ("-" | "!")? Group
-            Mult    ->  Neg (("*" | "/") Neg )*
-            Add     ->  Mult (("+" | "-") Mult )*
-            Ineq    ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
-            Logic   ->  Ineq (("|" | "&") Ineq )*
-            Term    ->  <typeName> Var ("=" Logic)?("," Var ("=" Logic)? )* | Func
-            Command ->  (Term ";")*
-            Block   ->  "{" Command "}"
+
+        /* <typeName> = ["int", "double", "bool", "char", "string"]
+         * BoolConst->  ["yep", "nope"]
+         * Number   ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
+         * Var      ->  ^\w[\w\d]+$ <doesn't match with func name>
+         * String   ->  '"'<string>'"'
+         * Func     ->  <funcName> "(" Logic ( "," Logic )* ")"
+         * Group    ->  "(" Logic ")" | Number | Var | String | Function | BoolConst
+         * Neg      ->  (("-" | "!") ("-"|"!") <?= Neg : Group ) | Group
+         * Mult     ->  Neg (("*" | "/") Neg )*
+         * Add      ->  Mult (("+" | "-") Mult )*
+         * Ineq     ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
+         * Logic    ->  Ineq (("|" | "&") Ineq )*
+         * Assigning->  Var "="  "{" <?= Block : Logic
+         * 
+         * Declaring->  <typeName> Var ("="  "{" <?= Block : Logic)? ("," Var ("="  "{" <?= Block : Logic)? )*
+         * 
+         * DecArray ->  <typeName> "[" Number? "]" Var ( "<" <typeNameVar>* ">" )?   // int[] x <5, 4, 3>;  int[4] x <4, 3, 4>;  int[] x;  int[6] y;
+         * 
+         * If       -> "if" Logic  "{" <?= Block : Term ("else"  "{" <?= Block : Term)?
+         * Cycle    -> "while" Logic "{" <?= Block : Term | "do" "{" <?= Block : Term
+         * Term     ->  Declaring | Assigning | If | Cycle
+         * Command  ->  Term ";"
+         * Program  -> Command*
+         * Block    ->  "{" Program "}"
          */
 
 
@@ -104,13 +117,15 @@ namespace LangForRealMen.ParserLogic
                 throw new ParserBaseException(string.Format("Ожидался идентификатор (pos={0})", Pos));
             Skip();
 
+            if (FuncNode.GetNames().Contains(identifier))
+                throw new ParserBaseException("У переменной и функции не может быть одинакового имени!");
+
             return new VarNode {Value = identifier};
         }
 
-
         protected INode Function()
         {
-            var func = new FuncNode {Value = Match(FuncNode.GetNames())};
+            var func = new FuncNode { Value = Match(FuncNode.GetNames()) };
             Match("(");
             
             var pars = new List<INode> { Add() };
@@ -127,12 +142,10 @@ namespace LangForRealMen.ParserLogic
             return func;
         }
 
-
         protected INode BoolConstant()
         {
             return new BoolNode { Value = new BoolVar { Value = "yep" == Match("yep", "nope") } };
         }
-
 
         protected INode Group()
         {
@@ -166,7 +179,6 @@ namespace LangForRealMen.ParserLogic
             return Ident() as VarNode;
         }
 
-
         protected INode Neg()
         {
             INode result;
@@ -183,7 +195,6 @@ namespace LangForRealMen.ParserLogic
             return result;
         }
 
-
         protected INode Mult()
         {
             var left = Neg();
@@ -197,7 +208,6 @@ namespace LangForRealMen.ParserLogic
             }
             return left;
         }
-
 
         protected INode Add()
         {
@@ -213,7 +223,6 @@ namespace LangForRealMen.ParserLogic
             return left;
         }
 
-
         protected INode Inequality()
         {
             var left = Add();
@@ -225,7 +234,6 @@ namespace LangForRealMen.ParserLogic
             op.Nodes[1] = Add();
             return op;
         }
-
 
         protected INode Logic()
         {
@@ -241,8 +249,45 @@ namespace LangForRealMen.ParserLogic
             return left;
         }
 
+        protected INode DeclaringArray(string type, VarNode ident)
+        {
+            Match("[");
 
-        protected IEnumerable<INode> Declaring()
+            var size = -1;
+            if (!IsMatch("]"))
+            {
+                bool isInt;
+                size = (int) TypeInferer.GetNumericValue(Number().Evaluate(), out isInt);
+            }
+            Match("]");
+
+            var res = new ArrayNode();
+            res.Nodes[0] = new StringNode {Value = type};
+            res.Nodes[1] = new StringNode {Value = ident.Value};
+            res.Nodes[2] = new NumberNode {Value = new IntVar {Value = size}};
+
+            if (!IsMatch("<")) 
+                return res;
+            
+            Match("<");
+
+            res.Nodes[3] = new ArrayInitNode();
+            (res.Nodes[3] as ArrayInitNode).Data.Add((Number() as NumberNode).Value);
+
+            while (IsMatch(","))
+            {
+                Match(",");
+                (res.Nodes[3] as ArrayInitNode).Data.Add((Number() as NumberNode).Value);
+            }
+
+            Match(">");
+
+            ((res.Nodes[2] as NumberNode).Value as IntVar).Value = (res.Nodes[3] as ArrayInitNode).Data.Count;
+
+            return res;
+        }
+
+        protected INode Declaring()
         {
             var result = new List<INode>();
             var type = Match("int", "double", "string", "bool", "block");
@@ -250,6 +295,9 @@ namespace LangForRealMen.ParserLogic
             var identifier = Ident() as VarNode;
             if (identifier == null)
                 throw  new ASTException("Введите имя переменной!");
+
+            if (IsMatch("["))
+                return DeclaringArray(type, identifier);
 
             var op = new AssignNode { Children = new INode[3] };
             op.Children[0] = new StringNode { Value = type };
@@ -260,12 +308,7 @@ namespace LangForRealMen.ParserLogic
             {
                 Match("=");
 
-                INode value;
-                if (type == "block" || IsMatch("{"))
-                    value = Block();
-                else
-                    value = Logic();
-
+                var value = IsMatch("{") ? Block() : Logic();
                 op.Children[2] = value;
             }
             result.Add(op);
@@ -286,20 +329,23 @@ namespace LangForRealMen.ParserLogic
                 {
                     Match("=");
 
-                    INode value;
-                    if (type == "block" || IsMatch("{"))
-                        value = Block();
-                    else
-                        value = Logic();
+                    var value = IsMatch("{") ? Block() : Logic();
 
                     op2.Children[2] = value;
                 }
                 result.Add(op2);
             }
 
-            return result;
+            if (result.Count == 1)
+                return result[0];
+            
+            var block = new BlockNode { Value = new BlockVar() };
+            foreach (var node in result)
+            {
+                block.Value.Commands.Add(node);
+            }
+            return block;
         }
-
 
         protected INode Assigning(VarNode identifier)
         {
@@ -319,7 +365,6 @@ namespace LangForRealMen.ParserLogic
             return op;
         }
 
-
         protected INode IfStatement()
         {
             Match("if");
@@ -327,78 +372,121 @@ namespace LangForRealMen.ParserLogic
             var res = new IfNode {Nodes = new INode[3]};
             res.Nodes[0] = Logic();
             Match(")");
-            res.Nodes[1] = Block();
+            if (IsMatch("{"))
+                res.Nodes[1] = Block();
+            else
+                res.Nodes[1] = Term();
             res.Nodes[2] = null;
 
             if (!IsMatch("else")) 
                 return res;
             
             Match("else");
-            res.Nodes[2] = Block();
+            if (IsMatch("{"))
+                res.Nodes[2] = Block();
+            else
+                res.Nodes[2] = Term();
+
             return res;
         }
 
+        protected INode WhileStatement()
+        {
+            Match("while");
+            Match("(");
 
-        public IEnumerable<INode> Term()
+            var result = new WhileNode();
+            result.Nodes[0] = Logic();
+
+            Match(")");
+
+            if (IsMatch("{"))
+                result.Nodes[1] = Block();
+            else
+                result.Nodes[1] = Term();
+
+            return result;
+        }
+
+        protected INode DoWhileStatement()
+        {
+            Match("do");
+
+            var result = new DoWhileNode();
+
+            if (IsMatch("{"))
+                result.Nodes[1] = Block();
+            else
+                result.Nodes[1] = Term();
+
+            Match("while");
+            Match("(");
+
+            result.Nodes[0] = Logic();
+
+            Match(")");
+
+            return result;
+        }
+
+        public INode Term()
         {
             if (IsMatch("if"))
-                return Enumerable.Repeat(IfStatement(), 1);
+                return IfStatement();
+
+            if (IsMatch("do"))
+                return DoWhileStatement();
+
+            if (IsMatch("while"))
+                return WhileStatement();
 
             if (IsMatch("int", "double", "string", "bool", "block"))
                 return Declaring();
 
             if (IsMatch(FuncNode.GetNames()))
-                return Enumerable.Repeat(Function(), 1);
+                return Function();
 
             var var = Ident() as VarNode;
             if (var == null)
                 throw new ASTException("Ожидался идендификатор");
 
-            if (!IsMatch(";")) 
-                return Enumerable.Repeat(Assigning(var), 1);
-
-            //TODO: узнать, что тут не так :(
-            var block = new BlockNode {Value = (VarCreator.GetVar(var.Value) as BlockVar)};
-//            var res = Enumerable.Repeat(block, 1);
-            return new List<INode> {block};
+            return !IsMatch(";") ? Assigning(var) : new BlockNode { Value = (VarCreator.GetVar(var.Value) as BlockVar) };
         }
 
-
-        public IEnumerable<INode> Command()
+        public INode Command()
         {
-            var res = new List<INode>();
-            while (!IsMatch("}") && !End)
-            {
-                res.AddRange(Term());
-                Match(";");
-            }
+            var res = Term();
+            Match(";");
             return res;
         }
 
+        public INode Program()
+        {
+            var result = new BlockNode { Value = new BlockVar() };
+
+            while (!IsMatch("}"))
+                result.Value.Commands.Add(Command());
+
+            return result;
+        } 
+
         public INode Block()
         {
-            var result = new BlockNode {Value = new BlockVar()};
             Match("{");
-            result.Value.Commands = Command();
+            var result = Program();
             Match("}");
             return result;
         }
 
-
-        public void Result()
-        {
-            var commands = Term();
-            foreach (var node in commands)
-            {
-                node.Evaluate();
-            }
-        }
-
-
-        public void Execute(string source)
+        public void Parse(string source)
         {
             Init(source);
-            Result();
+            _program = Block();
+        }
+
+        public void Execute()
+        {
+            _program.Evaluate();
         }
     }
 }

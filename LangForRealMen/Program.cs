@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using LangForRealMen.ParserLogic;
 
 namespace LangForRealMen
@@ -7,11 +8,11 @@ namespace LangForRealMen
     {
         static void Main()
         {
-            while (true)
-            {
-                Console.Write(" > ");
-                Parser.GetParser().Execute(Console.ReadLine());
-            }
+            var sr = new StreamReader("input.txt");
+            var data = sr.ReadToEnd();
+            Parser.GetParser().Parse(data);
+            Console.WriteLine(Parser.GetParser()._program);
+            Console.ReadKey();
         }
     }
 }
