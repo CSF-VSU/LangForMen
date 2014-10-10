@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AST\AddMultNode.cs" />
+    <Compile Include="AST\ArgumentNode.cs" />
     <Compile Include="AST\ArrayInitNode.cs" />
     <Compile Include="AST\ArrayNode.cs" />
     <Compile Include="AST\AssignNode.cs" />
@@ -54,8 +55,10 @@
     <Compile Include="AST\FuncNode.cs" />
     <Compile Include="AST\IfNode.cs" />
     <Compile Include="AST\INode.cs" />
+    <Compile Include="AST\MethodNode.cs" />
     <Compile Include="AST\NegNode.cs" />
     <Compile Include="AST\NumberNode.cs" />
+    <Compile Include="AST\ParamNode.cs" />
     <Compile Include="AST\RelationNode.cs" />
     <Compile Include="AST\StringNode.cs" />
     <Compile Include="AST\VarNode.cs" />

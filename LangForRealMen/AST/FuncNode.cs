@@ -72,7 +72,7 @@ namespace LangForRealMen.AST
          
 
         public string Value { get; set; }
-        public INode[] Nodes { get; set; }
+        public ParamNode Node { get; set; }
 
         public IVarType Evaluate()
         {
@@ -84,36 +84,33 @@ namespace LangForRealMen.AST
 
             if (FuncUtils.ContainsKey(Value))
             {
-                if (Nodes.GetLength(0) != 1)
+                if (Node.Nodes.GetLength(0) != 1)
                     throw new ASTException(String.Format("Функция {0} требует 1 входной параметр!", Value));
 
-                FuncUtils[Value](Nodes[0]);
+                FuncUtils[Value](Node.Nodes[0]);
                 return null;
             }
 
             if (FuncOperations1.ContainsKey(Value))
             {
-                if (Nodes.GetLength(0) != 1)
+                if (Node.Nodes.GetLength(0) != 1)
                     throw new ASTException(String.Format("Функция {0} требует 1 входной параметр!", Value));
                 
-                var p = TypeInferer.GetNumericValue(Nodes[0].Evaluate(), out isInt);
+                var p = TypeInferer.GetNumericValue(Node.Nodes[0].Evaluate(), out isInt);
                 return new DoubleVar { Value = FuncOperations1[Value](p) };
             }
 
-            if (Nodes.GetLength(0) != 2)
+            if (Node.Nodes.GetLength(0) != 2)
                 throw new ASTException(String.Format("Функция {0} требует 2 входных параметра!", Value));
 
-            var p1 = TypeInferer.GetNumericValue(Nodes[0].Evaluate(), out isInt);
-            var p2 = TypeInferer.GetNumericValue(Nodes[0].Evaluate(), out isInt);
+            var p1 = TypeInferer.GetNumericValue(Node.Nodes[0].Evaluate(), out isInt);
+            var p2 = TypeInferer.GetNumericValue(Node.Nodes[0].Evaluate(), out isInt);
             return new DoubleVar {Value = FuncOperations2[Value](p1, p2)};
         }
 
         public override string ToString()
         {
-            var part = Value + "(";
-            part = Nodes.Aggregate(part, (current, node) => current + (node + ", "));
-            part = part.Substring(0, part.Length - 2);
-            part += ")";
+            var part = Value + Node;
             return part;
         }
     }

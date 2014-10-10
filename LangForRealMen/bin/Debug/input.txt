@@ -1,4 +1,8 @@
 {
+	int DoStuff(double x | int qwe) {
+		bool q = yep;
+	};
+
 	int x[] <4, 3, 5>;
 	
 	while (5<20+1) {

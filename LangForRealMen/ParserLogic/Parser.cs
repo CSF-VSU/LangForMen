@@ -39,7 +39,8 @@ namespace LangForRealMen.ParserLogic
          * Number   ->  ^(0|[1-9][0-9]*)([.,][0-9]+)?$
          * Var      ->  ^\w[\w\d]+$ <doesn't match with func name>
          * String   ->  '"'<string>'"'
-         * Func     ->  <funcName> "(" Logic ( "," Logic )* ")"
+         * Params   ->  ""(" Logic ( "," Logic )* ")"
+         * Func     ->  <funcName> Params
          * Group    ->  "(" Logic ")" | Number | Var | String | Function | BoolConst
          * Neg      ->  (("-" | "!") ("-"|"!") <?= Neg : Group ) | Group
          * Mult     ->  Neg (("*" | "/") Neg )*
@@ -47,11 +48,8 @@ namespace LangForRealMen.ParserLogic
          * Ineq     ->  Add ((">" | ">=" | "<" | "<=" | "==" | "!=" ) Add )?
          * Logic    ->  Ineq (("|" | "&") Ineq )*
          * Assigning->  Var "="  "{" <?= Block : Logic
-         * 
          * Declaring->  <typeName> Var ("="  "{" <?= Block : Logic)? ("," Var ("="  "{" <?= Block : Logic)? )*
-         * 
          * DecArray ->  <typeName> "[" Number? "]" Var ( "<" <typeNameVar>* ">" )?   // int[] x <5, 4, 3>;  int[4] x <4, 3, 4>;  int[] x;  int[6] y;
-         * 
          * If       -> "if" Logic  "{" <?= Block : Term ("else"  "{" <?= Block : Term)?
          * Cycle    -> "while" Logic "{" <?= Block : Term | "do" "{" <?= Block : Term
          * Term     ->  Declaring | Assigning | If | Cycle
@@ -123,22 +121,26 @@ namespace LangForRealMen.ParserLogic
             return new VarNode {Value = identifier};
         }
 
-        protected INode Function()
+        protected INode Params()
         {
-            var func = new FuncNode { Value = Match(FuncNode.GetNames()) };
             Match("(");
-            
-            var pars = new List<INode> { Add() };
+
+            var pars = new List<INode> {Add()};
             while (IsMatch(","))
             {
                 Match(",");
                 pars.Add(Add());
             }
-
-            func.Nodes = new INode[pars.Count];
-            func.Nodes = pars.ToArray();
+            var result = new ParamNode {Nodes = new INode[pars.Count]};
+            result.Nodes = pars.ToArray();
 
             Match(")");
+            return result;
+        }
+
+        protected INode Function()
+        {
+            var func = new FuncNode {Value = Match(FuncNode.GetNames()), Node = (ParamNode) Params()};
             return func;
         }
 
@@ -287,10 +289,39 @@ namespace LangForRealMen.ParserLogic
             return res;
         }
 
+        private INode DeclaringMethod(string type, INode identifier)
+        {
+            var result = new MethodNode{Children = new INode[4]};
+            result.Children[0] = new StringNode {Value = type};
+            result.Children[1] = identifier;
+            result.Children[2] = Arguments();
+            result.Children[3] = Block();
+            return result;
+        }
+
+        private INode Arguments()
+        {
+            Match("(");
+
+            var array = new List<INode> {Declaring()};
+            while (IsMatch("|"))
+            {
+                Match("|");
+                array.Add(Declaring());
+            }
+
+
+            Match(")");
+
+            var result = new ArgumentNode {Childen = new INode[array.Count]};
+            result.Childen = array.ToArray();
+            return result;
+        }
+
         protected INode Declaring()
         {
             var result = new List<INode>();
-            var type = Match("int", "double", "string", "bool", "block");
+            var type = Match("void", "int", "double", "string", "bool", "block");
 
             var identifier = Ident() as VarNode;
             if (identifier == null)
@@ -299,10 +330,16 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("["))
                 return DeclaringArray(type, identifier);
 
+            if (IsMatch("("))
+                return DeclaringMethod(type, identifier);
+
             var op = new AssignNode { Children = new INode[3] };
             op.Children[0] = new StringNode { Value = type };
-            op.Children[1] = new StringNode { Value = identifier.Value };
+            op.Children[1] = identifier;
             op.Children[2] = null;
+
+            if (IsMatch("|"))
+                return op;
 
             if (IsMatch("="))
             {
@@ -313,7 +350,6 @@ namespace LangForRealMen.ParserLogic
             }
             result.Add(op);
 
-
             while (IsMatch(","))
             {
                 Match(",");
@@ -323,7 +359,7 @@ namespace LangForRealMen.ParserLogic
 
                 var op2 = new AssignNode { Children = new INode[3] };
                 op2.Children[0] = new StringNode { Value = type };
-                op2.Children[1] = new StringNode { Value = identifier.Value };
+                op2.Children[1] = identifier;
                 op2.Children[2] = null;
                 if (IsMatch("="))
                 {
@@ -346,6 +382,7 @@ namespace LangForRealMen.ParserLogic
             }
             return block;
         }
+
 
         protected INode Assigning(VarNode identifier)
         {
@@ -440,7 +477,7 @@ namespace LangForRealMen.ParserLogic
             if (IsMatch("while"))
                 return WhileStatement();
 
-            if (IsMatch("int", "double", "string", "bool", "block"))
+            if (IsMatch("void", "int", "double", "string", "bool", "block"))
                 return Declaring();
 
             if (IsMatch(FuncNode.GetNames()))
